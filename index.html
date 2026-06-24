@@ -1,0 +1,1345 @@
+﻿<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Discord CSV2ASS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-main: #f5f7f9;
+        --bg-panel: #ffffff;
+        --text-main: #1a1a1a;
+        --text-muted: #666666;
+        --accent: #222222;
+        --accent-hover: #000000;
+        --border: #e0e4e8;
+        --border-focus: #999999;
+        --radius: 6px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background-color: #cccccc;
+        border-radius: 0;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background-color: #999999;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          "Noto Sans JP",
+          -apple-system,
+          BlinkMacSystemFont,
+          Roboto,
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
+        background-color: var(--bg-panel);
+        color: var(--text-main);
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        letter-spacing: 0.02em;
+        user-select: none;
+        cursor: default;
+      }
+
+      img {
+        -webkit-user-drag: none;
+      }
+
+      input,
+      textarea,
+      select {
+        user-select: auto;
+      }
+
+      .app-card {
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+        background: var(--bg-panel);
+        align-items: stretch;
+      }
+
+      .settings-area {
+        flex: 1;
+        padding: 30px 40px;
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+        background: var(--bg-main);
+      }
+
+      .preview-area {
+        width: 420px;
+        padding: 30px 40px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background: var(--bg-panel);
+        display: flex;
+        flex-direction: column;
+      }
+
+      h2 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin-top: 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-main);
+      }
+      h3 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin: 30px 0 15px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .toggle-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 30px 0 15px 0;
+      }
+      .toggle-header h3 {
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+      .toggle-header input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1px solid var(--border-focus);
+        border-radius: 3px;
+        cursor: pointer;
+        position: relative;
+        transition: 0.2s;
+        outline: none;
+        background-color: var(--bg-panel);
+      }
+      .toggle-header input[type="checkbox"]:checked {
+        background-color: var(--accent);
+        border-color: var(--accent);
+      }
+      .toggle-header input[type="checkbox"]:checked::after {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 1px;
+        width: 4px;
+        height: 8px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+      .toggle-header label {
+        cursor: pointer;
+        user-select: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .section-content {
+        transition: opacity 0.2s ease;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+      .row label {
+        width: 140px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-main);
+      }
+      input[type="range"] {
+        flex: 1;
+        margin: 0 15px;
+        -webkit-appearance: none;
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        transition: transform 0.1s;
+      }
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+      }
+      input[type="number"],
+      input[type="time"],
+      select {
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.85rem;
+        color: var(--text-main);
+        background: transparent;
+        transition: border-color 0.2s;
+      }
+      input[type="number"]:focus,
+      input[type="time"]:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--border-focus);
+      }
+      input[type="number"] {
+        width: 60px;
+        text-align: center;
+      }
+      input[type="time"],
+      select {
+        flex: 1;
+        margin-right: 15px;
+      }
+      input[type="color"] {
+        -webkit-appearance: none;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        cursor: pointer;
+        overflow: hidden;
+      }
+      input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+      input[type="color"]::-webkit-color-swatch {
+        border: none;
+        border-radius: 50%;
+      }
+      .row input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 38px;
+        height: 22px;
+        margin: 0;
+        border: 1px solid var(--border-focus);
+        border-radius: 12px;
+        background: var(--border);
+        cursor: pointer;
+        position: relative;
+        transition: background-color 0.2s, border-color 0.2s;
+      }
+      .row input[type="checkbox"]::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: white;
+        transition: transform 0.2s;
+      }
+      .row input[type="checkbox"]:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .row input[type="checkbox"]:checked::after {
+        transform: translateX(16px);
+      }
+
+      .preview-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background-color: #00ff00;
+        border-radius: var(--radius);
+        overflow: hidden;
+        margin-bottom: 20px;
+        border: 1px solid var(--border);
+      }
+      .preview-stage {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        transform-origin: top left;
+      }
+      .preview-bg-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1;
+      }
+      .preview-text-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: max-content;
+      }
+      .preview-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+      }
+      .preview-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        background: rgba(10, 10, 10, 0.7);
+        z-index: 1000;
+      }
+      .preview-modal.is-open {
+        display: flex;
+      }
+      .preview-modal-panel {
+        width: min(92vw, 1500px);
+        max-height: 92vh;
+        padding: 24px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+      }
+      .preview-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .preview-modal-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-main);
+      }
+      .preview-modal-close {
+        width: auto;
+        padding: 8px 14px;
+      }
+      .preview-modal-wrapper {
+        width: 100%;
+        max-height: calc(92vh - 110px);
+        aspect-ratio: 16 / 9;
+        margin-bottom: 0;
+      }
+      .preview-shadow-text,
+      .preview-text {
+        white-space: nowrap;
+        line-height: 1.2;
+      }
+      .preview-shadow-text {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+      }
+
+      button {
+        background-color: var(--accent);
+        color: white;
+        border: 1px solid var(--accent);
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        width: 100%;
+      }
+      button:hover {
+        background-color: var(--accent-hover);
+      }
+      .btn-small {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+        width: auto;
+        background-color: transparent;
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        margin-left: 8px;
+      }
+      .btn-small:hover {
+        background-color: #f5f5f5;
+        color: var(--text-main);
+      }
+      .btn-small.danger {
+        color: #d93025;
+        border-color: #fce8e6;
+        background-color: #fce8e6;
+      }
+      .btn-small.danger:hover {
+        background-color: #fad2cf;
+        border-color: #fad2cf;
+      }
+
+      .file-input-wrapper {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+      .file-input-wrapper input[type="file"] {
+        flex: 1;
+        font-size: 0.85rem;
+        padding: 8px 10px;
+        border: 1px dashed var(--border-focus);
+        border-radius: var(--radius);
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: border-color 0.2s;
+      }
+      .file-input-wrapper input[type="file"]:hover {
+        border-color: var(--accent);
+      }
+      .subtext {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-bottom: 25px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-card">
+      <div class="settings-area">
+        <h2>設定パネル</h2>
+        <h3>1. データの読み込み</h3>
+        <div class="file-input-wrapper">
+          <input type="file" id="csv_file" accept=".csv" />
+        </div>
+        <p class="subtext">・CSVファイルを選択してください。</p>
+
+        <h3>2. 基本設定</h3>
+        <div class="row">
+          <label>開始日時</label>
+          <input
+            type="time"
+            id="val_time"
+            step="1"
+            value="00:00:00"
+            style="flex: none; width: 120px"
+          />
+        </div>
+        <div class="row">
+          <label>フォント</label>
+          <select id="val_font">
+            <option value="MS PGothic">MS Pゴシック</option>
+            <option value="Meiryo">メイリオ</option>
+            <option value="Yu Gothic">Yu Gothic</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>フォントサイズ</label>
+          <input type="range" id="slide_size" min="10" max="150" value="40" />
+          <input type="number" id="val_size" value="40" />&nbsp;px
+        </div>
+        <div class="row">
+          <label>コメント表示範囲</label>
+          <input
+            type="range"
+            id="slide_comment_area"
+            min="30"
+            max="100"
+            value="40"
+          />
+          <input type="number" id="val_comment_area" min="30" max="100" value="40" />&nbsp;%
+        </div>
+        <div class="row">
+          <label for="val_resolution">出力解像度</label>
+          <select
+            id="val_resolution"
+            title="Select the same resolution used in HandBrake"
+          >
+            <option value="1280x720">1280 x 720 (720p)</option>
+            <option value="1920x1080" selected>1920 x 1080 (1080p)</option>
+            <option value="2560x1440">2560 x 1440 (1440p)</option>
+            <option value="3840x2160">3840 x 2160 (4K)</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>太字</label>
+          <input
+            type="checkbox"
+            id="check_bold"
+            checked
+            aria-label="Bold text"
+            title="Bold text"
+          />
+        </div>
+        <div class="row">
+          <label>表示時間</label>
+          <input
+            type="range"
+            id="slide_duration"
+            min="1"
+            max="20"
+            step="0.5"
+            value="15.0"
+          />
+          <input type="number" id="val_duration" value="15.0" />&nbsp;秒
+        </div>
+        <div class="row">
+          <label>全体の透明度</label>
+          <input type="range" id="slide_op_all" min="0" max="100" value="70" />
+          <input type="number" id="val_op_all" value="70" />&nbsp;%
+        </div>
+
+        <h3>3. テキスト</h3>
+        <div class="row">
+          <label>文字色 / 透明度</label>
+          <input type="color" id="val_color" value="#ffffff" />
+          <input
+            type="range"
+            id="slide_op_text"
+            min="0"
+            max="100"
+            value="100"
+          />
+          <input type="number" id="val_op_text" value="100" />&nbsp;%
+        </div>
+
+        <div class="toggle-header">
+          <input type="checkbox" id="check_outline" />
+          <label for="check_outline">4. 縁取り</label>
+        </div>
+        <div class="section-content" id="section_outline">
+          <div class="row">
+            <label>縁取り色 / サイズ</label>
+            <input type="color" id="val_outline_color" value="#000000" />
+            <input type="range" id="slide_outline" min="0" max="15" value="2" />
+            <input type="number" id="val_outline" value="2" />&nbsp;px
+          </div>
+          <div class="row">
+            <label>縁取りの透明度</label>
+            <input
+              type="range"
+              id="slide_op_outline"
+              min="0"
+              max="100"
+              value="100"
+            />
+            <input type="number" id="val_op_outline" value="100" />&nbsp;%
+          </div>
+        </div>
+
+        <div class="toggle-header">
+          <input type="checkbox" id="check_shadow" checked />
+          <label for="check_shadow">5. 影 / ブラー / シャドウ</label>
+        </div>
+        <div class="section-content" id="section_shadow">
+          <div class="row">
+            <label>影色 / オフセット</label>
+            <input type="color" id="val_shadow_color" value="#000000" />
+            <input
+              type="range"
+              id="slide_shadow_dist"
+              min="0"
+              max="30"
+              value="0"
+            />
+            <input type="number" id="val_shadow_dist" value="0" />&nbsp;px
+          </div>
+          <div class="row">
+            <label>影のサイズ</label>
+            <input
+              type="range"
+              id="slide_shadow_size"
+              min="0"
+              max="30"
+              value="2"
+            />
+            <input type="number" id="val_shadow_size" value="2" />&nbsp;px
+          </div>
+          <div class="row">
+            <label>ブラー</label>
+            <input
+              type="range"
+              id="slide_blur"
+              min="0"
+              max="15"
+              step="0.5"
+              value="3"
+            />
+            <input type="number" id="val_blur" value="3" />&nbsp;px
+          </div>
+          <div class="row">
+            <label>影の透明度</label>
+            <input
+              type="range"
+              id="slide_op_shadow"
+              min="0"
+              max="100"
+              value="65"
+            />
+            <input type="number" id="val_op_shadow" value="65" />&nbsp;%
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-area">
+        <h2>プレビュー</h2>
+        <div class="row" style="justify-content: flex-end; margin-bottom: 12px">
+          <label
+            style="
+              width: auto;
+              margin-right: 8px;
+              font-size: 0.8rem;
+              font-weight: 500;
+              color: var(--text-muted);
+            "
+            >背景色:</label
+          >
+          <input type="color" id="val_bg_color" value="#00FF00" />
+          <button
+            class="btn-small"
+            onclick="document.getElementById('bg_img_input').click()"
+          >
+            背景画像設定
+          </button>
+          <button class="btn-small danger" onclick="clearBgImage()">
+            クリア
+          </button>
+          <input
+            type="file"
+            id="bg_img_input"
+            accept="image/*"
+            style="display: none"
+          />
+        </div>
+
+        <div class="preview-wrapper" id="preview_box">
+          <div class="preview-stage" id="preview_stage">
+          <img id="preview_img" class="preview-bg-img" style="display: none" />
+          <div class="preview-text-container" id="preview_text_container">
+            <div class="preview-shadow-text" id="preview_shadow_text">
+              サンプルテキスト<br />ここに表示されます<br />88888888
+            </div>
+            <div class="preview-text" id="preview_text">
+              サンプルテキスト<br />ここに表示されます<br />88888888
+            </div>
+          </div>
+          </div>
+        </div>
+        <div class="preview-actions">
+          <button class="btn-small" type="button" id="open_preview_modal">
+            拡大表示
+          </button>
+        </div>
+        <h2 style="margin-top: 30px">出力</h2>
+        <button
+          onclick="generateASS()"
+          style="
+            padding: 16px;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-top: 10px;
+          "
+        >
+          ASSファイルを生成して保存
+        </button>
+      </div>
+    </div>
+
+    <div class="preview-modal" id="preview_modal" aria-hidden="true">
+      <div class="preview-modal-panel">
+        <div class="preview-modal-header">
+          <div class="preview-modal-title">拡大プレビュー</div>
+          <button
+            class="btn-small preview-modal-close"
+            type="button"
+            id="close_preview_modal"
+          >
+            閉じる
+          </button>
+        </div>
+        <div
+          class="preview-wrapper preview-modal-wrapper"
+          id="preview_modal_box"
+        >
+          <div class="preview-stage" id="preview_modal_stage">
+            <img
+              id="preview_modal_img"
+              class="preview-bg-img"
+              style="display: none"
+            />
+            <div
+              class="preview-text-container"
+              id="preview_modal_text_container"
+            >
+              <div
+                class="preview-shadow-text"
+                id="preview_modal_shadow_text"
+              >
+                サンプルテキスト<br />ここに表示されます<br />88888888
+              </div>
+              <div class="preview-text" id="preview_modal_text">
+                サンプルテキスト<br />ここに表示されます<br />88888888
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // JavaScript initialization
+      const inputs = [
+        "size",
+        "comment_area",
+        "duration",
+        "op_all",
+        "op_text",
+        "outline",
+        "op_outline",
+        "shadow_dist",
+        "shadow_size",
+        "blur",
+        "op_shadow",
+      ];
+      inputs.forEach((id) => {
+        const slide = document.getElementById(`slide_${id}`);
+        const val = document.getElementById(`val_${id}`);
+        if (slide && val) {
+          slide.addEventListener("input", (e) => {
+            val.value = e.target.value;
+            updatePreview();
+          });
+          val.addEventListener("input", (e) => {
+            slide.value = e.target.value;
+            updatePreview();
+          });
+        }
+      });
+
+      const colors = [
+        "font",
+        "color",
+        "outline_color",
+        "shadow_color",
+        "bg_color",
+      ];
+      colors.forEach((id) => {
+        document
+          .getElementById(`val_${id}`)
+          .addEventListener("input", updatePreview);
+      });
+
+      document.getElementById("val_font").addEventListener("change", updatePreview);
+
+      async function loadInstalledFonts() {
+        if (!window.electronAPI?.getInstalledFonts) return;
+
+        const fontSelect = document.getElementById("val_font");
+        const selectedFont = fontSelect.value;
+
+        try {
+          const installedFonts = await window.electronAPI.getInstalledFonts();
+          const existingFonts = new Set(
+            [...fontSelect.options].map((option) => option.value),
+          );
+          const localFonts = installedFonts.filter(
+            (font) => !existingFonts.has(font),
+          );
+
+          if (localFonts.length === 0) return;
+
+          const group = document.createElement("optgroup");
+          group.label = "インストール済みフォント";
+          localFonts.forEach((font) => {
+            const option = document.createElement("option");
+            option.value = font;
+            option.textContent = font;
+            group.appendChild(option);
+          });
+          fontSelect.appendChild(group);
+          fontSelect.value = selectedFont;
+        } catch (error) {
+          console.warn("ローカルフォントを読み込めませんでした。", error);
+        }
+      }
+
+      loadInstalledFonts();
+
+      document
+        .getElementById("check_bold")
+        .addEventListener("change", updatePreview);
+      document.getElementById("check_bold").previousElementSibling.htmlFor =
+        "check_bold";
+      document
+        .getElementById("val_resolution")
+        .addEventListener("change", updatePreview);
+      window.addEventListener("resize", updatePreview);
+      document
+        .getElementById("open_preview_modal")
+        .addEventListener("click", openPreviewModal);
+      document
+        .getElementById("close_preview_modal")
+        .addEventListener("click", closePreviewModal);
+      document
+        .getElementById("preview_modal")
+        .addEventListener("click", function (e) {
+          if (e.target === e.currentTarget) {
+            closePreviewModal();
+          }
+        });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          closePreviewModal();
+        }
+      });
+
+      function setupToggle(checkId, sectionId) {
+        const checkbox = document.getElementById(checkId);
+        const section = document.getElementById(sectionId);
+        const applyState = () => {
+          const isChecked = checkbox.checked;
+          section.style.opacity = isChecked ? "1" : "0.4";
+          section.style.pointerEvents = isChecked ? "auto" : "none";
+          section
+            .querySelectorAll("input")
+            .forEach((inp) => (inp.disabled = !isChecked));
+        };
+        checkbox.addEventListener("change", () => {
+          applyState();
+          updatePreview();
+        });
+        applyState();
+      }
+      setupToggle("check_outline", "section_outline");
+      setupToggle("check_shadow", "section_shadow");
+
+      document
+        .getElementById("bg_img_input")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            const url = URL.createObjectURL(file);
+            const img = document.getElementById("preview_img");
+            img.src = url;
+            img.style.display = "block";
+          }
+          updatePreview();
+        });
+      document
+        .getElementById("csv_file")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            try {
+              const rows = parseCSV(event.target.result);
+              const { firstCommentDate } = getFirstCommentDate(rows);
+              const timeInput = document.getElementById("val_time");
+              timeInput.value = syncInputHour(firstCommentDate, timeInput.value);
+            } catch (error) {
+              alert(error.message);
+            }
+          };
+          reader.readAsText(file, "utf-8");
+        });
+
+      function clearBgImage() {
+        document.getElementById("preview_img").style.display = "none";
+        document.getElementById("bg_img_input").value = "";
+        updatePreview();
+      }
+
+      function openPreviewModal() {
+        const modal = document.getElementById("preview_modal");
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        updatePreview();
+      }
+
+      function closePreviewModal() {
+        const modal = document.getElementById("preview_modal");
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      function hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16),
+          g = parseInt(hex.slice(3, 5), 16),
+          b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function getOutputResolution() {
+        const [width, height] = document
+          .getElementById("val_resolution")
+          .value.split("x")
+          .map(Number);
+        return { width, height, scale: height / 1080 };
+      }
+
+      function applyPreviewToSurface(ids, output) {
+        const pText = document.getElementById(ids.text);
+        const pShadowText = document.getElementById(ids.shadowText);
+        const pContainer = document.getElementById(ids.container);
+        const pBox = document.getElementById(ids.box);
+        const pStage = document.getElementById(ids.stage);
+        const pImg = document.getElementById(ids.image);
+        const previewWidth = pBox.clientWidth || pBox.offsetWidth || output.width;
+        const previewScale = previewWidth / output.width;
+        pStage.style.width = `${output.width}px`;
+        pStage.style.height = `${output.height}px`;
+        pStage.style.transform = `scale(${previewScale})`;
+
+        pBox.style.backgroundImage = "none";
+        pBox.style.backgroundColor =
+          document.getElementById("val_bg_color").value;
+
+        const baseImg = document.getElementById("preview_img");
+        pImg.src = baseImg.src;
+        pImg.style.display = baseImg.style.display;
+
+        const isOutlineActive =
+          document.getElementById("check_outline").checked;
+        const isShadowActive = document.getElementById("check_shadow").checked;
+
+        const fontName = document.getElementById("val_font").value;
+        const fontSize =
+          document.getElementById("val_size").value * output.scale;
+        const isBold = document.getElementById("check_bold").checked;
+
+        // Match the exported comments, which start at the top of the frame.
+        pContainer.style.top = `${20 * output.scale}px`;
+        pContainer.style.left = "50%";
+        pContainer.style.transform = "translateX(-50%)";
+
+        const opAll = document.getElementById("val_op_all").value / 100;
+        const opT =
+          (document.getElementById("val_op_text").value / 100) * opAll;
+        const opO = isOutlineActive
+          ? (document.getElementById("val_op_outline").value / 100) * opAll
+          : 0;
+        const opS = isShadowActive
+          ? (document.getElementById("val_op_shadow").value / 100) * opAll
+          : 0;
+
+        const oSize = isOutlineActive
+          ? document.getElementById("val_outline").value * output.scale
+          : 0;
+        const sDist = isShadowActive
+          ? document.getElementById("val_shadow_dist").value * output.scale
+          : 0;
+        const sSize = isShadowActive
+          ? document.getElementById("val_shadow_size").value * output.scale
+          : 0;
+        const bVal = isShadowActive
+          ? document.getElementById("val_blur").value * output.scale
+          : 0;
+
+        const cText = hexToRgba(
+          document.getElementById("val_color").value,
+          opT,
+        );
+        const cOutline = hexToRgba(
+          document.getElementById("val_outline_color").value,
+          opO,
+        );
+        const cShadow = hexToRgba(
+          document.getElementById("val_shadow_color").value,
+          opS,
+        );
+
+        pShadowText.innerHTML = pText.innerHTML;
+        pText.style.fontFamily = `"${fontName}", sans-serif`;
+        pText.style.fontSize = `${fontSize}px`;
+        pText.style.fontWeight = isBold ? "700" : "400";
+        pText.style.color = cText;
+        pText.style.position = "relative";
+        pText.style.zIndex = "1";
+
+        if (oSize > 0 && opO > 0) {
+          pText.style.webkitTextStroke = `${oSize}px ${cOutline}`;
+          pText.style.paintOrder = "stroke fill";
+        } else {
+          pText.style.webkitTextStroke = "0px";
+          pText.style.paintOrder = "normal";
+        }
+
+        pShadowText.style.fontFamily = `"${fontName}", sans-serif`;
+        pShadowText.style.fontSize = `${fontSize}px`;
+        pShadowText.style.fontWeight = isBold ? "700" : "400";
+        pShadowText.style.color = cShadow;
+        pShadowText.style.transform = `translate(${sDist}px, ${sDist}px)`;
+        pShadowText.style.filter = bVal > 0 ? `blur(${bVal}px)` : "none";
+        pShadowText.style.webkitTextStroke =
+          sSize > 0 ? `${sSize}px ${cShadow}` : "0px";
+        pShadowText.style.paintOrder = "stroke fill";
+        pShadowText.style.textShadow = "none";
+
+        if (opS > 0 && (sDist > 0 || bVal > 0 || sSize > 0)) {
+          pContainer.style.filter = "none";
+          pShadowText.style.display = "block";
+        } else {
+          pContainer.style.filter = "none";
+          pShadowText.style.display = "none";
+        }
+        pText.style.textShadow = "none";
+      }
+
+      function updatePreview() {
+        const output = getOutputResolution();
+        applyPreviewToSurface(
+          {
+            box: "preview_box",
+            stage: "preview_stage",
+            image: "preview_img",
+            container: "preview_text_container",
+            shadowText: "preview_shadow_text",
+            text: "preview_text",
+          },
+          output,
+        );
+        applyPreviewToSurface(
+          {
+            box: "preview_modal_box",
+            stage: "preview_modal_stage",
+            image: "preview_modal_img",
+            container: "preview_modal_text_container",
+            shadowText: "preview_modal_shadow_text",
+            text: "preview_modal_text",
+          },
+          output,
+        );
+      }
+
+      function getStyleColor(hex, opacityPct) {
+        hex = hex.replace("#", "");
+        let alpha = Math.round((100 - opacityPct) * 2.55)
+          .toString(16)
+          .padStart(2, "0")
+          .toUpperCase();
+        return `&H${alpha}${hex.substring(4, 6)}${hex.substring(2, 4)}${hex.substring(0, 2)}`;
+      }
+      function getAssColor(hex) {
+        hex = hex.replace("#", "");
+        return `&H${hex.substring(4, 6)}${hex.substring(2, 4)}${hex.substring(0, 2)}&`;
+      }
+      function getAssAlpha(opacityPct) {
+        let alpha = Math.round((100 - opacityPct) * 2.55)
+          .toString(16)
+          .padStart(2, "0")
+          .toUpperCase();
+        return `&H${alpha}&`;
+      }
+      function escapeAssText(text) {
+        // Prevent Discord text from being parsed as ASS override tags.
+        return text
+          .replace(/\\/g, "\\\\")
+          .replace(/\{/g, "\\{")
+          .replace(/\}/g, "\\}");
+      }
+      function formatInputTime(dateObj) {
+        return [
+          String(dateObj.getHours()).padStart(2, "0"),
+          String(dateObj.getMinutes()).padStart(2, "0"),
+          String(dateObj.getSeconds()).padStart(2, "0"),
+        ].join(":");
+      }
+      function syncInputHour(dateObj, baseTimeStr) {
+        const currentParts = (baseTimeStr || "00:00:00").split(":");
+        return [
+          String(dateObj.getHours()).padStart(2, "0"),
+          String(currentParts[1] || "00").padStart(2, "0"),
+          String(currentParts[2] || "00").padStart(2, "0"),
+        ].join(":");
+      }
+      function formatAssTime(ms) {
+        if (ms < 0) ms = 0;
+        // ASS uses centiseconds. Round instead of truncating so timings do not
+        // drift slightly against the video's frame boundaries.
+        const totalCs = Math.round(ms / 10);
+        const cs = totalCs % 100;
+        const totalSec = Math.floor(totalCs / 100);
+        const s = totalSec % 60;
+        const m = Math.floor(totalSec / 60) % 60;
+        const h = Math.floor(totalSec / 3600);
+        return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${cs.toString().padStart(2, "0")}`;
+      }
+      function parseCSV(text) {
+        const rows = [];
+        let row = [];
+        let cell = "";
+        let inQ = false;
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i],
+            nc = text[i + 1];
+          if (c === '"' && inQ && nc === '"') {
+            cell += '"';
+            i++;
+          } else if (c === '"') {
+            inQ = !inQ;
+          } else if (c === "," && !inQ) {
+            row.push(cell);
+            cell = "";
+          } else if (c === "\n" && !inQ) {
+            row.push(cell);
+            rows.push(row);
+            row = [];
+            cell = "";
+          } else if (c !== "\r") {
+            cell += c;
+          }
+        }
+        if (row.length > 0 || cell !== "") {
+          row.push(cell);
+          rows.push(row);
+        }
+        return rows;
+      }
+      function getFirstCommentDate(rows) {
+        if (rows.length < 2) {
+          throw new Error("CSVデータが空です。");
+        }
+
+        const headers = rows[0].map((h) => h.trim().toLowerCase());
+        const dateIdx = headers.indexOf("date");
+        const contentIdx = headers.indexOf("content");
+        if (dateIdx === -1 || contentIdx === -1) {
+          throw new Error("CSVに 'Date' と 'Content' の列が見つかりません。");
+        }
+
+        const firstDateStr = rows[1][dateIdx].trim();
+        let firstCommentDate = new Date(firstDateStr);
+        if (isNaN(firstCommentDate.getTime())) {
+          firstCommentDate = new Date(firstDateStr.replace(/-/g, "/"));
+        }
+        if (isNaN(firstCommentDate.getTime())) {
+          throw new Error(
+            `エラー: CSVの日時形式を解析できませんでした。\n\n先頭の日時: ${firstDateStr}\n\nブラウザで認識できる日時形式にしてください。`,
+          );
+        }
+
+        return { dateIdx, contentIdx, firstCommentDate };
+      }
+
+      async function saveAssFile(defaultName, content) {
+        if (window.electronAPI && window.electronAPI.saveAssFile) {
+          return window.electronAPI.saveAssFile({
+            defaultPath: defaultName,
+            content,
+          });
+        }
+
+        const blob = new Blob([content], {
+          type: "text/plain;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = defaultName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return { canceled: false };
+      }
+
+      function generateASS() {
+        const fileInput = document.getElementById("csv_file");
+        if (!fileInput.files[0]) {
+          alert("エラー: CSVファイルを選択してください。");
+          return;
+        }
+        const duration = parseFloat(
+          document.getElementById("val_duration").value,
+        );
+        const durationMs = Math.round(duration * 1000);
+        const output = getOutputResolution();
+        const fSize = Math.round(
+          parseInt(document.getElementById("val_size").value) * output.scale,
+        );
+        const commentAreaRatio =
+          parseInt(document.getElementById("val_comment_area").value) / 100;
+        const isBold = document.getElementById("check_bold").checked;
+        const fontName = document.getElementById("val_font").value;
+        const assBold = isBold ? -1 : 0;
+        const assBoldTag = isBold ? "\\b2000" : "\\b0";
+        const isOutlineActive =
+          document.getElementById("check_outline").checked;
+        const isShadowActive = document.getElementById("check_shadow").checked;
+        const opAll =
+          parseInt(document.getElementById("val_op_all").value) / 100;
+        const opT =
+          parseInt(document.getElementById("val_op_text").value) * opAll;
+        const opO = isOutlineActive
+          ? parseInt(document.getElementById("val_op_outline").value) * opAll
+          : 0;
+        const opS = isShadowActive
+          ? parseInt(document.getElementById("val_op_shadow").value) * opAll
+          : 0;
+        const oSize = isOutlineActive
+          ? parseFloat(document.getElementById("val_outline").value) *
+            output.scale
+          : 0;
+        const sDist = isShadowActive
+          ? parseFloat(document.getElementById("val_shadow_dist").value) *
+            output.scale
+          : 0;
+        const sSize = isShadowActive
+          ? parseFloat(document.getElementById("val_shadow_size").value) *
+            output.scale
+          : 0;
+        const bVal = isShadowActive
+          ? parseFloat(document.getElementById("val_blur").value) *
+            output.scale
+          : 0;
+        const cPrimary = getStyleColor(
+          document.getElementById("val_color").value,
+          opT,
+        );
+        const cOutline = getStyleColor(
+          document.getElementById("val_outline_color").value,
+          opO,
+        );
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+          const rows = parseCSV(e.target.result);
+          let csvInfo;
+          try {
+            csvInfo = getFirstCommentDate(rows);
+          } catch (error) {
+            alert(
+              error.message || "CSVの読み込み中にエラーが発生しました。",
+            );
+            return;
+          }
+
+          const { dateIdx, contentIdx, firstCommentDate } = csvInfo;
+          const timeInput = document.getElementById("val_time");
+          timeInput.value = syncInputHour(firstCommentDate, timeInput.value);
+          const timeStr = document.getElementById("val_time").value;
+          const timeParts = timeStr.split(":");
+          const startDateTime = new Date(firstCommentDate);
+          startDateTime.setHours(
+            parseInt(timeParts[0] || 0),
+            parseInt(timeParts[1] || 0),
+            parseInt(timeParts[2] || 0),
+            0,
+          );
+          const startDateTimeMs = startDateTime.getTime();
+
+          let assContent = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${output.width}\nPlayResY: ${output.height}\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${fontName},${fSize},${cPrimary},&H000000FF,${cOutline},&H00000000,${assBold},0,0,0,100,100,0,0,1,${oSize},0,7,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+          let validCount = 0;
+          const renderShadow = opS > 0 && (sDist > 0 || sSize > 0 || bVal > 0);
+          const renderText = opT > 0 || opO > 0;
+          const topMargin = 20 * output.scale;
+          const commentAreaHeight = Math.max(
+            fSize,
+            (output.height - topMargin) * commentAreaRatio,
+          );
+          const minLaneStep = fSize + 8 * output.scale;
+          const laneCount = Math.min(
+            15,
+            Math.max(1, Math.floor((commentAreaHeight - fSize) / minLaneStep) + 1),
+          );
+          const laneStep =
+            laneCount > 1 ? (commentAreaHeight - fSize) / (laneCount - 1) : 0;
+
+          for (let i = 1; i < rows.length; i++) {
+            if (rows[i].length <= Math.max(dateIdx, contentIdx)) continue;
+            let dateStr = rows[i][dateIdx].trim();
+            let contentStr = rows[i][contentIdx]
+              .trim()
+              .replace(/[\n\r]+/g, " ");
+            if (!dateStr || !contentStr) continue;
+            contentStr = escapeAssText(contentStr);
+
+            let commentTime = new Date(dateStr).getTime();
+            if (isNaN(commentTime)) {
+              commentTime = new Date(dateStr.replace(/-/g, "/")).getTime();
+            }
+            const diffMs = commentTime - startDateTimeMs;
+
+            if (isNaN(diffMs) || diffMs < 0) continue;
+
+            const startAss = formatAssTime(diffMs);
+            const endAss = formatAssTime(diffMs + durationMs);
+            const yPos = topMargin + (validCount % laneCount) * laneStep;
+
+            if (renderShadow) {
+              const cTag = getAssColor(
+                document.getElementById("val_shadow_color").value,
+              );
+              const aTag = getAssAlpha(opS);
+              let tags = `${assBoldTag}\\move(${output.width + sDist}, ${yPos + sDist}, ${-(output.width + 580 * output.scale) + sDist}, ${yPos + sDist}, 0, ${durationMs})`;
+              tags += `\\1c${cTag}\\3c${cTag}\\1a${aTag}\\3a${aTag}\\bord${sSize}`;
+              if (bVal > 0) tags += `\\blur${bVal}`;
+              assContent += `Dialogue: 0,${startAss},${endAss},Default,,0,0,0,,{${tags}}${contentStr}\n`;
+            }
+            if (renderText) {
+              assContent += `Dialogue: 1,${startAss},${endAss},Default,,0,0,0,,{${assBoldTag}\\move(${output.width}, ${yPos}, ${-(output.width + 580 * output.scale)}, ${yPos}, 0, ${durationMs})}${contentStr}\n`;
+            }
+            validCount++;
+          }
+          if (validCount === 0) {
+            const firstDateStrDebug = rows[1][dateIdx]
+              .trim()
+              .replace(/-/g, "/");
+            const firstDateObj = new Date(firstDateStrDebug);
+            alert(
+              `変換できるコメントが0件でした。\n\nCSVの最初のコメント日時: ${firstDateObj.toLocaleString()}\nアプリで設定した開始日時: ${startDateTime.toLocaleString()}\n\n開始日時がCSVの日時より後になっている可能性があります。\n開始日時をCSVの日時より前の時刻に変更してみてください。`,
+            );
+            return;
+          }
+          try {
+            const assFileName = fileInput.files[0].name.replace(
+              /\.[^/.]+$/,
+              "",
+            ) + ".ass";
+            const saveResult = await saveAssFile(assFileName, assContent);
+            if (saveResult && !saveResult.canceled) {
+              alert(`${validCount}件のコメントを変換しました。`);
+            }
+          } catch (error) {
+            alert(`保存に失敗しました: ${error.message || error}`);
+          }
+          return;
+        };
+        reader.readAsText(fileInput.files[0]);
+      }
+      updatePreview();
+    </script>
+  </body>
+</html>

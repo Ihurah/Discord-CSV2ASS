@@ -1,0 +1,23 @@
+{
+  "name": "discord-csv2ass",
+  "productName": "Discord CSV2ASS",
+  "version": "1.0.0",
+  "description": "Discord CSV log to ASS subtitle converter",
+  "author": "Ihurah_com",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager . \"Discord CSV2ASS\" --platform=win32 --arch=x64 --overwrite --asar --icon=assets/icon --out=dist --ignore=\"^/dist($|/)\" --win32metadata.CompanyName=\"Discord CSV2ASS\" --win32metadata.FileDescription=\"Discord CSV2ASS\" --win32metadata.ProductName=\"Discord CSV2ASS\" --win32metadata.InternalName=\"Discord CSV2ASS\"",
+    "build-installer": "node build-installer.js"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-packager": "^17.1.2",
+    "electron-prebuilt": "^1.3.0",
+    "electron-rebuild": "^3.2.9",
+    "electron-winstaller": "^5.4.0"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  }
+}
