@@ -910,6 +910,20 @@
         return { width, height, scale: height / 1080 };
       }
 
+      function getChromeBoldSize(fontSize) {
+        return Math.max(0.75, Math.min(2.25, fontSize * 0.03));
+      }
+
+      function buildChromeBoldShadow(size, color) {
+        if (size <= 0) return "none";
+        return [
+          `${size}px 0 0 ${color}`,
+          `${-size}px 0 0 ${color}`,
+          `0 ${size}px 0 ${color}`,
+          `0 ${-size}px 0 ${color}`,
+        ].join(", ");
+      }
+
       function applyPreviewToSurface(ids, output) {
         const pText = document.getElementById(ids.text);
         const pShadowText = document.getElementById(ids.shadowText);
@@ -939,6 +953,7 @@
         const fontSize =
           document.getElementById("val_size").value * output.scale;
         const isBold = document.getElementById("check_bold").checked;
+        const chromeBoldSize = isBold ? getChromeBoldSize(fontSize) : 0;
 
         // Match the exported comments, which start at the top of the frame.
         pContainer.style.top = `${20 * output.scale}px`;
@@ -984,13 +999,16 @@
         pShadowText.innerHTML = pText.innerHTML;
         pText.style.fontFamily = `"${fontName}", sans-serif`;
         pText.style.fontSize = `${fontSize}px`;
-        pText.style.fontWeight = isBold ? "700" : "400";
+        pText.style.fontWeight = "400";
         pText.style.color = cText;
         pText.style.position = "relative";
         pText.style.zIndex = "1";
 
         if (oSize > 0 && opO > 0) {
           pText.style.webkitTextStroke = `${oSize}px ${cOutline}`;
+          pText.style.paintOrder = "stroke fill";
+        } else if (chromeBoldSize > 0) {
+          pText.style.webkitTextStroke = `${chromeBoldSize}px ${cText}`;
           pText.style.paintOrder = "stroke fill";
         } else {
           pText.style.webkitTextStroke = "0px";
@@ -999,7 +1017,7 @@
 
         pShadowText.style.fontFamily = `"${fontName}", sans-serif`;
         pShadowText.style.fontSize = `${fontSize}px`;
-        pShadowText.style.fontWeight = isBold ? "700" : "400";
+        pShadowText.style.fontWeight = "400";
         pShadowText.style.color = cShadow;
         pShadowText.style.transform = `translate(${sDist}px, ${sDist}px)`;
         pShadowText.style.filter = bVal > 0 ? `blur(${bVal}px)` : "none";
@@ -1015,7 +1033,10 @@
           pContainer.style.filter = "none";
           pShadowText.style.display = "none";
         }
-        pText.style.textShadow = "none";
+        pText.style.textShadow =
+          chromeBoldSize > 0 && oSize > 0
+            ? buildChromeBoldShadow(chromeBoldSize, cText)
+            : "none";
       }
 
       function updatePreview() {
@@ -1062,6 +1083,12 @@
           .padStart(2, "0")
           .toUpperCase();
         return `&H${alpha}&`;
+      }
+      function buildMoveTag(output, yPos, offset, durationMs) {
+        const startX = output.width + offset;
+        const endX = -(output.width + 580 * output.scale) + offset;
+        const y = yPos + offset;
+        return `\\move(${startX}, ${y}, ${endX}, ${y}, 0, ${durationMs})`;
       }
       function escapeAssText(text) {
         // Prevent Discord text from being parsed as ASS override tags.
@@ -1194,8 +1221,9 @@
           parseInt(document.getElementById("val_comment_area").value) / 100;
         const isBold = document.getElementById("check_bold").checked;
         const fontName = document.getElementById("val_font").value;
-        const assBold = isBold ? -1 : 0;
-        const assBoldTag = isBold ? "\\b2000" : "\\b0";
+        const assBold = 0;
+        const assBoldTag = "\\b0";
+        const chromeBoldSize = isBold ? getChromeBoldSize(fSize) : 0;
         const isOutlineActive =
           document.getElementById("check_outline").checked;
         const isShadowActive = document.getElementById("check_shadow").checked;
@@ -1233,6 +1261,12 @@
           document.getElementById("val_outline_color").value,
           opO,
         );
+        const primaryTag = getAssColor(document.getElementById("val_color").value);
+        const primaryAlphaTag = getAssAlpha(opT);
+        const outlineTag = getAssColor(
+          document.getElementById("val_outline_color").value,
+        );
+        const outlineAlphaTag = getAssAlpha(opO);
         const reader = new FileReader();
         reader.onload = async function (e) {
           const rows = parseCSV(e.target.result);
@@ -1297,19 +1331,32 @@
             const startAss = formatAssTime(diffMs);
             const endAss = formatAssTime(diffMs + durationMs);
             const yPos = topMargin + (validCount % laneCount) * laneStep;
+            const moveTag = buildMoveTag(output, yPos, 0, durationMs);
 
             if (renderShadow) {
               const cTag = getAssColor(
                 document.getElementById("val_shadow_color").value,
               );
               const aTag = getAssAlpha(opS);
-              let tags = `${assBoldTag}\\move(${output.width + sDist}, ${yPos + sDist}, ${-(output.width + 580 * output.scale) + sDist}, ${yPos + sDist}, 0, ${durationMs})`;
-              tags += `\\1c${cTag}\\3c${cTag}\\1a${aTag}\\3a${aTag}\\bord${sSize}`;
+              let tags = buildMoveTag(output, yPos, sDist, durationMs);
+              tags += `${assBoldTag}\\1c${cTag}\\3c${cTag}\\1a${aTag}\\3a${aTag}\\bord${sSize}`;
               if (bVal > 0) tags += `\\blur${bVal}`;
               assContent += `Dialogue: 0,${startAss},${endAss},Default,,0,0,0,,{${tags}}${contentStr}\n`;
             }
             if (renderText) {
-              assContent += `Dialogue: 1,${startAss},${endAss},Default,,0,0,0,,{${assBoldTag}\\move(${output.width}, ${yPos}, ${-(output.width + 580 * output.scale)}, ${yPos}, 0, ${durationMs})}${contentStr}\n`;
+              if (isBold) {
+                if (opO > 0 && oSize > 0) {
+                  const outlineTags = `${moveTag}\\b0\\1a&HFF&\\3c${outlineTag}\\3a${outlineAlphaTag}\\bord${oSize + chromeBoldSize}`;
+                  assContent += `Dialogue: 1,${startAss},${endAss},Default,,0,0,0,,{${outlineTags}}${contentStr}\n`;
+                }
+                const chromeBoldTags = `${moveTag}\\b0\\1a&HFF&\\3c${primaryTag}\\3a${primaryAlphaTag}\\bord${chromeBoldSize}`;
+                assContent += `Dialogue: 2,${startAss},${endAss},Default,,0,0,0,,{${chromeBoldTags}}${contentStr}\n`;
+                const textTags = `${moveTag}${assBoldTag}\\1c${primaryTag}\\1a${primaryAlphaTag}\\bord0`;
+                assContent += `Dialogue: 3,${startAss},${endAss},Default,,0,0,0,,{${textTags}}${contentStr}\n`;
+              } else {
+                const textTags = `${moveTag}${assBoldTag}\\1c${primaryTag}\\3c${outlineTag}\\1a${primaryAlphaTag}\\3a${outlineAlphaTag}\\bord${oSize}`;
+                assContent += `Dialogue: 1,${startAss},${endAss},Default,,0,0,0,,{${textTags}}${contentStr}\n`;
+              }
             }
             validCount++;
           }
