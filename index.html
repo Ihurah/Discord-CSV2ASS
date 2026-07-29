@@ -441,9 +441,9 @@
         <h2>設定パネル</h2>
         <h3>1. データの読み込み</h3>
         <div class="file-input-wrapper">
-          <input type="file" id="csv_file" accept=".csv" />
+          <input type="file" id="csv_file" accept=".csv,.xml" />
         </div>
-        <p class="subtext">・CSVファイルを選択してください。</p>
+        <p class="subtext">・DiscordChatExporterのCSV、またはニコニコ形式のXMLを選択してください。</p>
 
         <h3>2. 基本設定</h3>
         <div class="row">
@@ -516,8 +516,8 @@
         </div>
         <div class="row">
           <label>全体の透明度</label>
-          <input type="range" id="slide_op_all" min="0" max="100" value="70" />
-          <input type="number" id="val_op_all" value="70" />&nbsp;%
+          <input type="range" id="slide_op_all" min="0" max="100" value="80" />
+          <input type="number" id="val_op_all" value="80" />&nbsp;%
         </div>
 
         <h3>3. テキスト</h3>
@@ -582,9 +582,9 @@
               id="slide_shadow_size"
               min="0"
               max="30"
-              value="2"
+              value="4"
             />
-            <input type="number" id="val_shadow_size" value="2" />&nbsp;px
+            <input type="number" id="val_shadow_size" value="4" />&nbsp;px
           </div>
           <div class="row">
             <label>ブラー</label>
@@ -594,9 +594,9 @@
               min="0"
               max="15"
               step="0.5"
-              value="3"
+              value="3.5"
             />
-            <input type="number" id="val_blur" value="3" />&nbsp;px
+            <input type="number" id="val_blur" value="3.5" />&nbsp;px
           </div>
           <div class="row">
             <label>影の透明度</label>
@@ -865,6 +865,9 @@
           const reader = new FileReader();
           reader.onload = function (event) {
             try {
+              if (detectInputFormat(file, event.target.result) === "xml") {
+                return;
+              }
               const rows = parseCSV(event.target.result);
               const { firstCommentDate } = getFirstCommentDate(rows);
               const timeInput = document.getElementById("val_time");
@@ -1084,11 +1087,61 @@
           .toUpperCase();
         return `&H${alpha}&`;
       }
-      function buildMoveTag(output, yPos, offset, durationMs) {
+      function buildMoveTag(output, yPos, offset, durationMs, textWidth = 580 * output.scale) {
         const startX = output.width + offset;
-        const endX = -(output.width + 580 * output.scale) + offset;
+        const endX = -(textWidth + 60 * output.scale) + offset;
         const y = yPos + offset;
         return `\\move(${startX}, ${y}, ${endX}, ${y}, 0, ${durationMs})`;
+      }
+      function estimateCommentWidth(text, fontSize) {
+        const normalized = text.replace(/[ -~]/g, "a");
+        return Math.max(fontSize * 4, normalized.length * fontSize);
+      }
+      function getLaneAvailableMs(previous, nextWidth, durationMs, output) {
+        if (!previous) return 0;
+
+        const movePadding = 60 * output.scale;
+        const horizontalGap = 48 * output.scale;
+        const previousSpeed =
+          (output.width + previous.width + movePadding) / durationMs;
+        const nextSpeed = (output.width + nextWidth + movePadding) / durationMs;
+        const waitMs =
+          nextSpeed > previousSpeed
+            ? (nextWidth + horizontalGap) / nextSpeed
+            : (previous.width + horizontalGap) / previousSpeed;
+
+        return previous.startMs + Math.ceil(waitMs) + 80;
+      }
+      function pickLane(lanes, desiredStartMs, nextWidth, durationMs, output) {
+        let laneIndex = -1;
+        let earliestIndex = 0;
+        let earliestTime = getLaneAvailableMs(
+          lanes[0],
+          nextWidth,
+          durationMs,
+          output,
+        );
+
+        for (let i = 0; i < lanes.length; i++) {
+          const availableMs = getLaneAvailableMs(
+            lanes[i],
+            nextWidth,
+            durationMs,
+            output,
+          );
+          if (availableMs <= desiredStartMs) {
+            laneIndex = i;
+            break;
+          }
+          if (availableMs < earliestTime) {
+            earliestTime = availableMs;
+            earliestIndex = i;
+          }
+        }
+
+        return laneIndex === -1
+          ? { index: earliestIndex, startMs: earliestTime }
+          : { index: laneIndex, startMs: desiredStartMs };
       }
       function escapeAssText(text) {
         // Prevent Discord text from being parsed as ASS override tags.
@@ -1124,6 +1177,19 @@
         const h = Math.floor(totalSec / 3600);
         return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${cs.toString().padStart(2, "0")}`;
       }
+      function detectInputFormat(file, text) {
+        const name = file?.name?.toLowerCase() || "";
+        const sample = text.trimStart().slice(0, 200).toLowerCase();
+        if (
+          name.endsWith(".xml") ||
+          sample.startsWith("<packet") ||
+          sample.startsWith("<?xml") ||
+          sample.startsWith("<chat")
+        ) {
+          return "xml";
+        }
+        return "csv";
+      }
       function parseCSV(text) {
         const rows = [];
         let row = [];
@@ -1154,6 +1220,30 @@
           rows.push(row);
         }
         return rows;
+      }
+      function parseNiconicoXml(text) {
+        const doc = new DOMParser().parseFromString(text, "application/xml");
+        if (doc.querySelector("parsererror")) {
+          throw new Error("XMLの形式を解析できませんでした。");
+        }
+
+        const comments = [...doc.querySelectorAll("chat")]
+          .map((chat) => {
+            const vpos = Number(chat.getAttribute("vpos"));
+            const content = chat.textContent.trim().replace(/[\n\r]+/g, " ");
+            if (!Number.isFinite(vpos) || !content) return null;
+            return {
+              offsetMs: Math.max(0, Math.round(vpos * 10)),
+              content,
+            };
+          })
+          .filter(Boolean);
+
+        if (comments.length === 0) {
+          throw new Error("XMLに変換できるコメントが見つかりませんでした。");
+        }
+
+        return comments;
       }
       function getFirstCommentDate(rows) {
         if (rows.length < 2) {
@@ -1269,30 +1359,56 @@
         const outlineAlphaTag = getAssAlpha(opO);
         const reader = new FileReader();
         reader.onload = async function (e) {
-          const rows = parseCSV(e.target.result);
-          let csvInfo;
+          const inputText = e.target.result;
+          const inputFormat = detectInputFormat(fileInput.files[0], inputText);
+          let comments;
+          let csvDebugInfo = null;
           try {
-            csvInfo = getFirstCommentDate(rows);
+            if (inputFormat === "xml") {
+              comments = parseNiconicoXml(inputText);
+            } else {
+              const rows = parseCSV(inputText);
+              const { dateIdx, contentIdx, firstCommentDate } =
+                getFirstCommentDate(rows);
+              const timeInput = document.getElementById("val_time");
+              timeInput.value = syncInputHour(firstCommentDate, timeInput.value);
+              const timeStr = document.getElementById("val_time").value;
+              const timeParts = timeStr.split(":");
+              const startDateTime = new Date(firstCommentDate);
+              startDateTime.setHours(
+                parseInt(timeParts[0] || 0),
+                parseInt(timeParts[1] || 0),
+                parseInt(timeParts[2] || 0),
+                0,
+              );
+              const startDateTimeMs = startDateTime.getTime();
+              csvDebugInfo = { rows, dateIdx, contentIdx, startDateTime };
+
+              comments = [];
+              for (let i = 1; i < rows.length; i++) {
+                if (rows[i].length <= Math.max(dateIdx, contentIdx)) continue;
+                const dateStr = rows[i][dateIdx].trim();
+                const content = rows[i][contentIdx]
+                  .trim()
+                  .replace(/[\n\r]+/g, " ");
+                if (!dateStr || !content) continue;
+
+                let commentTime = new Date(dateStr).getTime();
+                if (isNaN(commentTime)) {
+                  commentTime = new Date(dateStr.replace(/-/g, "/")).getTime();
+                }
+                const offsetMs = commentTime - startDateTimeMs;
+                if (isNaN(offsetMs) || offsetMs < 0) continue;
+
+                comments.push({ offsetMs, content });
+              }
+            }
           } catch (error) {
             alert(
-              error.message || "CSVの読み込み中にエラーが発生しました。",
+              error.message || "ファイルの読み込み中にエラーが発生しました。",
             );
             return;
           }
-
-          const { dateIdx, contentIdx, firstCommentDate } = csvInfo;
-          const timeInput = document.getElementById("val_time");
-          timeInput.value = syncInputHour(firstCommentDate, timeInput.value);
-          const timeStr = document.getElementById("val_time").value;
-          const timeParts = timeStr.split(":");
-          const startDateTime = new Date(firstCommentDate);
-          startDateTime.setHours(
-            parseInt(timeParts[0] || 0),
-            parseInt(timeParts[1] || 0),
-            parseInt(timeParts[2] || 0),
-            0,
-          );
-          const startDateTimeMs = startDateTime.getTime();
 
           let assContent = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${output.width}\nPlayResY: ${output.height}\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${fontName},${fSize},${cPrimary},&H000000FF,${cOutline},&H00000000,${assBold},0,0,0,100,100,0,0,1,${oSize},0,7,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
           let validCount = 0;
@@ -1303,42 +1419,86 @@
             fSize,
             (output.height - topMargin) * commentAreaRatio,
           );
-          const minLaneStep = fSize + 8 * output.scale;
-          const laneCount = Math.min(
-            15,
-            Math.max(1, Math.floor((commentAreaHeight - fSize) / minLaneStep) + 1),
+          // Keep lanes compact while still reserving room for outlines and
+          // shadows. The lanes are stacked from the top instead of stretched
+          // across the whole comment area.
+          const boldStroke = isBold ? chromeBoldSize : 0;
+          const outlineReach = oSize + boldStroke;
+          const shadowReach = sDist + sSize + bVal * 2;
+          const effectReach = Math.max(outlineReach, shadowReach);
+          const minLaneStep = Math.ceil(
+            fSize * 1.22 + effectReach * 1.4 + 8 * output.scale,
           );
-          const laneStep =
-            laneCount > 1 ? (commentAreaHeight - fSize) / (laneCount - 1) : 0;
+          const laneCount = Math.max(
+            1,
+            Math.floor((commentAreaHeight - fSize) / minLaneStep) + 1,
+          );
+          const laneStep = minLaneStep;
+          const laneLastComment = Array(laneCount).fill(null);
+          comments.sort((a, b) => a.offsetMs - b.offsetMs);
+          const maxWidthBySecond = new Map();
 
-          for (let i = 1; i < rows.length; i++) {
-            if (rows[i].length <= Math.max(dateIdx, contentIdx)) continue;
-            let dateStr = rows[i][dateIdx].trim();
-            let contentStr = rows[i][contentIdx]
-              .trim()
-              .replace(/[\n\r]+/g, " ");
-            if (!dateStr || !contentStr) continue;
+          // Comments posted in the same second share a travel distance. This
+          // keeps their speed consistent even when one comment is much longer.
+          for (const comment of comments) {
+            const text = escapeAssText(
+              comment.content.trim().replace(/[\n\r]+/g, " "),
+            );
+            if (!text) continue;
+
+            const second = Math.floor(comment.offsetMs / 1000);
+            const width = estimateCommentWidth(text, fSize);
+            maxWidthBySecond.set(
+              second,
+              Math.max(maxWidthBySecond.get(second) || 0, width),
+            );
+          }
+
+          for (const comment of comments) {
+            let contentStr = comment.content.trim().replace(/[\n\r]+/g, " ");
+            if (!contentStr) continue;
             contentStr = escapeAssText(contentStr);
 
-            let commentTime = new Date(dateStr).getTime();
-            if (isNaN(commentTime)) {
-              commentTime = new Date(dateStr.replace(/-/g, "/")).getTime();
-            }
-            const diffMs = commentTime - startDateTimeMs;
-
-            if (isNaN(diffMs) || diffMs < 0) continue;
+            const second = Math.floor(comment.offsetMs / 1000);
+            const commentWidth =
+              maxWidthBySecond.get(second) ||
+              estimateCommentWidth(contentStr, fSize);
+            const lane = pickLane(
+              laneLastComment,
+              comment.offsetMs,
+              commentWidth,
+              durationMs,
+              output,
+            );
+            const diffMs = lane.startMs;
+            laneLastComment[lane.index] = {
+              startMs: diffMs,
+              width: commentWidth,
+            };
 
             const startAss = formatAssTime(diffMs);
             const endAss = formatAssTime(diffMs + durationMs);
-            const yPos = topMargin + (validCount % laneCount) * laneStep;
-            const moveTag = buildMoveTag(output, yPos, 0, durationMs);
+            const yPos = topMargin + lane.index * laneStep;
+            const moveTag = buildMoveTag(
+              output,
+              yPos,
+              0,
+              durationMs,
+              commentWidth,
+            );
 
             if (renderShadow) {
               const cTag = getAssColor(
                 document.getElementById("val_shadow_color").value,
               );
               const aTag = getAssAlpha(opS);
-              let tags = buildMoveTag(output, yPos, sDist, durationMs);
+              let tags = buildMoveTag(
+                output,
+                yPos,
+                sDist,
+                durationMs,
+                commentWidth,
+              );
               tags += `${assBoldTag}\\1c${cTag}\\3c${cTag}\\1a${aTag}\\3a${aTag}\\bord${sSize}`;
               if (bVal > 0) tags += `\\blur${bVal}`;
               assContent += `Dialogue: 0,${startAss},${endAss},Default,,0,0,0,,{${tags}}${contentStr}\n`;
@@ -1361,13 +1521,18 @@
             validCount++;
           }
           if (validCount === 0) {
-            const firstDateStrDebug = rows[1][dateIdx]
-              .trim()
-              .replace(/-/g, "/");
-            const firstDateObj = new Date(firstDateStrDebug);
-            alert(
-              `変換できるコメントが0件でした。\n\nCSVの最初のコメント日時: ${firstDateObj.toLocaleString()}\nアプリで設定した開始日時: ${startDateTime.toLocaleString()}\n\n開始日時がCSVの日時より後になっている可能性があります。\n開始日時をCSVの日時より前の時刻に変更してみてください。`,
-            );
+            if (csvDebugInfo) {
+              const { rows, dateIdx, startDateTime } = csvDebugInfo;
+              const firstDateStrDebug = rows[1][dateIdx]
+                .trim()
+                .replace(/-/g, "/");
+              const firstDateObj = new Date(firstDateStrDebug);
+              alert(
+                `変換できるコメントが0件でした。\n\nCSVの最初のコメント日時: ${firstDateObj.toLocaleString()}\nアプリで設定した開始日時: ${startDateTime.toLocaleString()}\n\n開始日時がCSVの日時より後になっている可能性があります。\n開始日時をCSVの日時より前の時刻に変更してみてください。`,
+              );
+            } else {
+              alert("変換できるコメントが0件でした。");
+            }
             return;
           }
           try {

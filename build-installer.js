@@ -31,6 +31,7 @@ async function createInstaller() {
     title: "Discord CSV2ASS",
     description: "Discord CSV log to ASS subtitle converter",
     noMsi: true,
+    noDelta: true,
   };
 
   // Only include icon if it exists to avoid errors
