@@ -359,15 +359,27 @@
         margin-bottom: 0;
       }
       .preview-shadow-text,
+      .preview-outline-text,
       .preview-text {
         white-space: nowrap;
         line-height: 1.2;
       }
-      .preview-shadow-text {
+      .preview-shadow-text,
+      .preview-outline-text {
         position: absolute;
         top: 0;
         left: 0;
         pointer-events: none;
+      }
+      .preview-shadow-text {
+        z-index: 0;
+      }
+      .preview-outline-text {
+        z-index: 1;
+      }
+      .preview-text {
+        position: relative;
+        z-index: 2;
       }
 
       button {
@@ -466,8 +478,8 @@
         </div>
         <div class="row">
           <label>フォントサイズ</label>
-          <input type="range" id="slide_size" min="10" max="150" value="40" />
-          <input type="number" id="val_size" value="40" />&nbsp;px
+          <input type="range" id="slide_size" min="10" max="150" value="45" />
+          <input type="number" id="val_size" value="45" />&nbsp;px
         </div>
         <div class="row">
           <label>コメント表示範囲</label>
@@ -510,9 +522,9 @@
             min="1"
             max="20"
             step="0.5"
-            value="15.0"
+            value="6.0"
           />
-          <input type="number" id="val_duration" value="15.0" />&nbsp;秒
+          <input type="number" id="val_duration" value="6.0" />&nbsp;秒
         </div>
         <div class="row">
           <label>全体の透明度</label>
@@ -650,6 +662,9 @@
             <div class="preview-shadow-text" id="preview_shadow_text">
               サンプルテキスト<br />ここに表示されます<br />88888888
             </div>
+            <div class="preview-outline-text" id="preview_outline_text">
+              サンプルテキスト<br />ここに表示されます<br />88888888
+            </div>
             <div class="preview-text" id="preview_text">
               サンプルテキスト<br />ここに表示されます<br />88888888
             </div>
@@ -708,6 +723,12 @@
               >
                 サンプルテキスト<br />ここに表示されます<br />88888888
               </div>
+              <div
+                class="preview-outline-text"
+                id="preview_modal_outline_text"
+              >
+                サンプルテキスト<br />ここに表示されます<br />88888888
+              </div>
               <div class="preview-text" id="preview_modal_text">
                 サンプルテキスト<br />ここに表示されます<br />88888888
               </div>
@@ -732,16 +753,136 @@
         "blur",
         "op_shadow",
       ];
+      const SETTINGS_STORAGE_KEY = "discord-csv2ass-settings-v2";
+      const LEGACY_BASIC_SETTINGS_STORAGE_KEY =
+        "discord-csv2ass-basic-settings-v1";
+      const BOLD_FONT_WEIGHT = 900;
+      const BOLD_EXPANSION_RATIO = 0.014;
+      const settingIds = [
+        "time",
+        "font",
+        "size",
+        "comment_area",
+        "resolution",
+        "bold",
+        "duration",
+        "op_all",
+        "color",
+        "op_text",
+        "outline_enabled",
+        "outline_color",
+        "outline",
+        "op_outline",
+        "shadow_enabled",
+        "shadow_color",
+        "shadow_dist",
+        "shadow_size",
+        "blur",
+        "op_shadow",
+        "bg_color",
+      ];
+      const pairedSettingIds = new Set([
+        "size",
+        "comment_area",
+        "duration",
+        "op_all",
+        "op_text",
+        "outline",
+        "op_outline",
+        "shadow_dist",
+        "shadow_size",
+        "blur",
+        "op_shadow",
+      ]);
+      let savedSettings = loadSavedSettings();
+
+      function getSettingElement(id) {
+        if (id === "bold") return document.getElementById("check_bold");
+        if (id === "outline_enabled") {
+          return document.getElementById("check_outline");
+        }
+        if (id === "shadow_enabled") {
+          return document.getElementById("check_shadow");
+        }
+        return document.getElementById(`val_${id}`);
+      }
+
+      function loadSavedSettings() {
+        try {
+          const current =
+            JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY)) || {};
+          const legacy =
+            JSON.parse(
+              localStorage.getItem(LEGACY_BASIC_SETTINGS_STORAGE_KEY),
+            ) || {};
+          return { ...legacy, ...current };
+        } catch (error) {
+          console.warn("設定を読み込めませんでした。", error);
+          return {};
+        }
+      }
+
+      function saveSettings() {
+        const settings = {};
+        settingIds.forEach((id) => {
+          const element = getSettingElement(id);
+          if (!element) return;
+          settings[id] =
+            element.type === "checkbox" ? element.checked : element.value;
+        });
+        savedSettings = settings;
+
+        try {
+          localStorage.setItem(
+            SETTINGS_STORAGE_KEY,
+            JSON.stringify(settings),
+          );
+        } catch (error) {
+          console.warn("設定を保存できませんでした。", error);
+        }
+      }
+
+      function applySavedSettings({ includeFont = false } = {}) {
+        settingIds.forEach((id) => {
+          if (!(id in savedSettings)) return;
+          const element = getSettingElement(id);
+          if (!element) return;
+
+          if (id === "font") {
+            if (!includeFont) return;
+            const hasFont = [...element.options].some(
+              (option) => option.value === savedSettings[id],
+            );
+            if (!hasFont) return;
+          }
+
+          if (element.type === "checkbox") {
+            element.checked = Boolean(savedSettings[id]);
+          } else {
+            element.value = savedSettings[id];
+          }
+
+          if (pairedSettingIds.has(id)) {
+            const slide = document.getElementById(`slide_${id}`);
+            if (slide) slide.value = savedSettings[id];
+          }
+        });
+      }
+
+      applySavedSettings({ includeFont: true });
+
       inputs.forEach((id) => {
         const slide = document.getElementById(`slide_${id}`);
         const val = document.getElementById(`val_${id}`);
         if (slide && val) {
           slide.addEventListener("input", (e) => {
             val.value = e.target.value;
+            if (pairedSettingIds.has(id)) saveSettings();
             updatePreview();
           });
           val.addEventListener("input", (e) => {
             slide.value = e.target.value;
+            if (pairedSettingIds.has(id)) saveSettings();
             updatePreview();
           });
         }
@@ -757,16 +898,25 @@
       colors.forEach((id) => {
         document
           .getElementById(`val_${id}`)
-          .addEventListener("input", updatePreview);
+          .addEventListener("input", () => {
+            saveSettings();
+            updatePreview();
+          });
       });
 
-      document.getElementById("val_font").addEventListener("change", updatePreview);
+      document.getElementById("val_time").addEventListener("input", () => {
+        saveSettings();
+        updatePreview();
+      });
+      document.getElementById("val_font").addEventListener("change", () => {
+        saveSettings();
+        updatePreview();
+      });
 
       async function loadInstalledFonts() {
         if (!window.electronAPI?.getInstalledFonts) return;
 
         const fontSelect = document.getElementById("val_font");
-        const selectedFont = fontSelect.value;
 
         try {
           const installedFonts = await window.electronAPI.getInstalledFonts();
@@ -788,7 +938,7 @@
             group.appendChild(option);
           });
           fontSelect.appendChild(group);
-          fontSelect.value = selectedFont;
+          applySavedSettings({ includeFont: true });
         } catch (error) {
           console.warn("ローカルフォントを読み込めませんでした。", error);
         }
@@ -798,12 +948,18 @@
 
       document
         .getElementById("check_bold")
-        .addEventListener("change", updatePreview);
+        .addEventListener("change", () => {
+          saveSettings();
+          updatePreview();
+        });
       document.getElementById("check_bold").previousElementSibling.htmlFor =
         "check_bold";
       document
         .getElementById("val_resolution")
-        .addEventListener("change", updatePreview);
+        .addEventListener("change", () => {
+          saveSettings();
+          updatePreview();
+        });
       window.addEventListener("resize", updatePreview);
       document
         .getElementById("open_preview_modal")
@@ -837,6 +993,7 @@
         };
         checkbox.addEventListener("change", () => {
           applyState();
+          saveSettings();
           updatePreview();
         });
         applyState();
@@ -872,6 +1029,7 @@
               const { firstCommentDate } = getFirstCommentDate(rows);
               const timeInput = document.getElementById("val_time");
               timeInput.value = syncInputHour(firstCommentDate, timeInput.value);
+              saveSettings();
             } catch (error) {
               alert(error.message);
             }
@@ -913,23 +1071,14 @@
         return { width, height, scale: height / 1080 };
       }
 
-      function getChromeBoldSize(fontSize) {
-        return Math.max(0.75, Math.min(2.25, fontSize * 0.03));
-      }
-
-      function buildChromeBoldShadow(size, color) {
-        if (size <= 0) return "none";
-        return [
-          `${size}px 0 0 ${color}`,
-          `${-size}px 0 0 ${color}`,
-          `0 ${size}px 0 ${color}`,
-          `0 ${-size}px 0 ${color}`,
-        ].join(", ");
+      function getBoldExpansion(fontSize) {
+        return Math.max(0.55, Math.min(1.25, fontSize * BOLD_EXPANSION_RATIO));
       }
 
       function applyPreviewToSurface(ids, output) {
         const pText = document.getElementById(ids.text);
         const pShadowText = document.getElementById(ids.shadowText);
+        const pOutlineText = document.getElementById(ids.outlineText);
         const pContainer = document.getElementById(ids.container);
         const pBox = document.getElementById(ids.box);
         const pStage = document.getElementById(ids.stage);
@@ -956,7 +1105,9 @@
         const fontSize =
           document.getElementById("val_size").value * output.scale;
         const isBold = document.getElementById("check_bold").checked;
-        const chromeBoldSize = isBold ? getChromeBoldSize(fontSize) : 0;
+        const isCompactPreview = ids.box === "preview_box";
+        const boldExpansion =
+          isBold && !isCompactPreview ? getBoldExpansion(fontSize) : 0;
 
         // Match the exported comments, which start at the top of the frame.
         pContainer.style.top = `${20 * output.scale}px`;
@@ -986,48 +1137,73 @@
           ? document.getElementById("val_blur").value * output.scale
           : 0;
 
-        const cText = hexToRgba(
-          document.getElementById("val_color").value,
-          opT,
-        );
-        const cOutline = hexToRgba(
-          document.getElementById("val_outline_color").value,
-          opO,
-        );
-        const cShadow = hexToRgba(
-          document.getElementById("val_shadow_color").value,
-          opS,
-        );
+        const textColor = document.getElementById("val_color").value;
+        const outlineColor = document.getElementById("val_outline_color").value;
+        const shadowColor = document.getElementById("val_shadow_color").value;
+        const cText = hexToRgba(textColor, opT);
+        const cOutline = hexToRgba(outlineColor, opO);
 
         pShadowText.innerHTML = pText.innerHTML;
+        pOutlineText.innerHTML = pText.innerHTML;
         pText.style.fontFamily = `"${fontName}", sans-serif`;
         pText.style.fontSize = `${fontSize}px`;
-        pText.style.fontWeight = "400";
-        pText.style.color = cText;
-        pText.style.position = "relative";
-        pText.style.zIndex = "1";
+        pText.style.fontWeight = isBold ? String(BOLD_FONT_WEIGHT) : "400";
+        pText.style.opacity = isBold ? String(opT) : "1";
 
-        if (oSize > 0 && opO > 0) {
-          pText.style.webkitTextStroke = `${oSize}px ${cOutline}`;
-          pText.style.paintOrder = "stroke fill";
-        } else if (chromeBoldSize > 0) {
-          pText.style.webkitTextStroke = `${chromeBoldSize}px ${cText}`;
-          pText.style.paintOrder = "stroke fill";
-        } else {
+        if (isBold) {
+          pText.style.color = textColor;
           pText.style.webkitTextStroke = "0px";
           pText.style.paintOrder = "normal";
+          pText.style.textShadow =
+            boldExpansion > 0
+              ? `${-boldExpansion}px 0 0 ${textColor}, ${boldExpansion}px 0 0 ${textColor}`
+              : "none";
+        } else if (oSize > 0 && opO > 0) {
+          pText.style.color = cText;
+          pText.style.webkitTextStroke = `${oSize}px ${cOutline}`;
+          pText.style.paintOrder = "stroke fill";
+          pText.style.textShadow = "none";
+        } else {
+          pText.style.color = cText;
+          pText.style.webkitTextStroke = "0px";
+          pText.style.paintOrder = "normal";
+          pText.style.textShadow = "none";
         }
+
+        pOutlineText.style.fontFamily = `"${fontName}", sans-serif`;
+        pOutlineText.style.fontSize = `${fontSize}px`;
+        pOutlineText.style.fontWeight = isBold
+          ? String(BOLD_FONT_WEIGHT)
+          : "400";
+        pOutlineText.style.color = "transparent";
+        pOutlineText.style.webkitTextFillColor = "transparent";
+        pOutlineText.style.webkitTextStroke = `${oSize * 2}px ${outlineColor}`;
+        pOutlineText.style.paintOrder = "stroke fill";
+        pOutlineText.style.textShadow =
+          boldExpansion > 0
+            ? `${-boldExpansion}px 0 0 ${outlineColor}, ${boldExpansion}px 0 0 ${outlineColor}`
+            : "none";
+        pOutlineText.style.opacity = String(opO);
+        pOutlineText.style.display =
+          isBold && oSize > 0 && opO > 0 ? "block" : "none";
 
         pShadowText.style.fontFamily = `"${fontName}", sans-serif`;
         pShadowText.style.fontSize = `${fontSize}px`;
-        pShadowText.style.fontWeight = "400";
-        pShadowText.style.color = cShadow;
+        pShadowText.style.fontWeight = isBold
+          ? String(BOLD_FONT_WEIGHT)
+          : "400";
+        pShadowText.style.color = shadowColor;
+        pShadowText.style.opacity = String(opS);
         pShadowText.style.transform = `translate(${sDist}px, ${sDist}px)`;
         pShadowText.style.filter = bVal > 0 ? `blur(${bVal}px)` : "none";
         pShadowText.style.webkitTextStroke =
-          sSize > 0 ? `${sSize}px ${cShadow}` : "0px";
+          sSize > 0
+            ? `${sSize * 2}px ${shadowColor}`
+            : "0px";
         pShadowText.style.paintOrder = "stroke fill";
-        pShadowText.style.textShadow = "none";
+        pShadowText.style.textShadow = isBold && boldExpansion > 0
+          ? `${-boldExpansion}px 0 0 ${shadowColor}, ${boldExpansion}px 0 0 ${shadowColor}`
+          : "none";
 
         if (opS > 0 && (sDist > 0 || bVal > 0 || sSize > 0)) {
           pContainer.style.filter = "none";
@@ -1036,10 +1212,6 @@
           pContainer.style.filter = "none";
           pShadowText.style.display = "none";
         }
-        pText.style.textShadow =
-          chromeBoldSize > 0 && oSize > 0
-            ? buildChromeBoldShadow(chromeBoldSize, cText)
-            : "none";
       }
 
       function updatePreview() {
@@ -1051,6 +1223,7 @@
             image: "preview_img",
             container: "preview_text_container",
             shadowText: "preview_shadow_text",
+            outlineText: "preview_outline_text",
             text: "preview_text",
           },
           output,
@@ -1062,6 +1235,7 @@
             image: "preview_modal_img",
             container: "preview_modal_text_container",
             shadowText: "preview_modal_shadow_text",
+            outlineText: "preview_modal_outline_text",
             text: "preview_modal_text",
           },
           output,
@@ -1087,61 +1261,103 @@
           .toUpperCase();
         return `&H${alpha}&`;
       }
-      function buildMoveTag(output, yPos, offset, durationMs, textWidth = 580 * output.scale) {
-        const startX = output.width + offset;
-        const endX = -(textWidth + 60 * output.scale) + offset;
+      function getMoveMetrics(output, textWidth, durationMs) {
+        const startX = output.width;
+        const endX = -(textWidth + 60 * output.scale);
+        const travelWidth = startX - endX;
+        const speed = travelWidth / durationMs;
+        const centerArrivalMs =
+          ((output.width + textWidth) / 2 / travelWidth) * durationMs;
+        return { startX, endX, speed, centerArrivalMs };
+      }
+      function getCenteredDisplayTiming(offsetMs, output, textWidth, durationMs) {
+        const { centerArrivalMs } = getMoveMetrics(output, textWidth, durationMs);
+        const desiredStartMs = offsetMs - centerArrivalMs;
+        const displayStartMs = Math.max(0, Math.round(desiredStartMs));
+        const elapsedAtStartMs = Math.max(0, displayStartMs - desiredStartMs);
+        const displayDurationMs = Math.max(
+          1,
+          Math.round(durationMs - elapsedAtStartMs),
+        );
+        return { displayStartMs, elapsedAtStartMs, displayDurationMs };
+      }
+      function buildMoveTag(
+        output,
+        yPos,
+        offset,
+        durationMs,
+        textWidth = 580 * output.scale,
+        elapsedAtStartMs = 0,
+      ) {
+        const { startX, endX, speed } = getMoveMetrics(
+          output,
+          textWidth,
+          durationMs,
+        );
+        const startXAtDisplay = startX - speed * elapsedAtStartMs + offset;
+        const endXAtDisplay = endX + offset;
+        const moveDurationMs = Math.max(
+          1,
+          Math.round(durationMs - elapsedAtStartMs),
+        );
         const y = yPos + offset;
-        return `\\move(${startX}, ${y}, ${endX}, ${y}, 0, ${durationMs})`;
+        return `\\move(${startXAtDisplay}, ${y}, ${endXAtDisplay}, ${y}, 0, ${moveDurationMs})`;
       }
       function estimateCommentWidth(text, fontSize) {
         const normalized = text.replace(/[ -~]/g, "a");
-        return Math.max(fontSize * 4, normalized.length * fontSize);
+        // Leave a safety margin for Japanese glyph metrics, outlines, and
+        // synthetic bold. This width is also used as the off-screen endpoint.
+        return Math.ceil(
+          Math.max(
+            fontSize * 4,
+            Array.from(normalized).length * fontSize * 1.16 + fontSize,
+          ),
+        );
       }
-      function getLaneAvailableMs(previous, nextWidth, durationMs, output) {
+      function getLaneAvailableMs(previous, nextWidth, nextDurationMs, output) {
         if (!previous) return 0;
 
         const movePadding = 60 * output.scale;
         const horizontalGap = 48 * output.scale;
+        const previousDurationMs = previous.durationMs || nextDurationMs;
         const previousSpeed =
-          (output.width + previous.width + movePadding) / durationMs;
-        const nextSpeed = (output.width + nextWidth + movePadding) / durationMs;
-        const waitMs =
-          nextSpeed > previousSpeed
-            ? (nextWidth + horizontalGap) / nextSpeed
-            : (previous.width + horizontalGap) / previousSpeed;
+          (output.width + previous.width + movePadding) / previousDurationMs;
+        const nextSpeed =
+          (output.width + nextWidth + movePadding) / nextDurationMs;
 
-        return previous.startMs + Math.ceil(waitMs) + 80;
-      }
-      function pickLane(lanes, desiredStartMs, nextWidth, durationMs, output) {
-        let laneIndex = -1;
-        let earliestIndex = 0;
-        let earliestTime = getLaneAvailableMs(
-          lanes[0],
-          nextWidth,
-          durationMs,
-          output,
+        // Keep the following comment to the right of the previous one at both
+        // the moment it enters and the moment the previous comment leaves.
+        // Checking only the entry point lets a faster, longer comment catch up.
+        const entryWaitMs = (previous.width + horizontalGap) / previousSpeed;
+        const exitWaitMs = Math.max(
+          0,
+          (previous.width +
+            horizontalGap +
+            (nextSpeed - previousSpeed) * previousDurationMs) /
+            nextSpeed,
         );
 
+        return previous.startMs + Math.ceil(Math.max(entryWaitMs, exitWaitMs));
+      }
+      function pickLane(lanes, desiredStartMs, nextWidth, nextDurationMs, output) {
         for (let i = 0; i < lanes.length; i++) {
           const availableMs = getLaneAvailableMs(
             lanes[i],
             nextWidth,
-            durationMs,
+            nextDurationMs,
             output,
           );
           if (availableMs <= desiredStartMs) {
-            laneIndex = i;
-            break;
-          }
-          if (availableMs < earliestTime) {
-            earliestTime = availableMs;
-            earliestIndex = i;
+            return i;
           }
         }
 
-        return laneIndex === -1
-          ? { index: earliestIndex, startMs: earliestTime }
-          : { index: laneIndex, startMs: desiredStartMs };
+        // Never place a comment in an occupied lane just to preserve its
+        // timestamp. The caller creates another lane in this case.
+        return -1;
+      }
+      function getCommentSecond(comment) {
+        return Math.floor(comment.offsetMs / 1000);
       }
       function escapeAssText(text) {
         // Prevent Discord text from being parsed as ASS override tags.
@@ -1311,9 +1527,9 @@
           parseInt(document.getElementById("val_comment_area").value) / 100;
         const isBold = document.getElementById("check_bold").checked;
         const fontName = document.getElementById("val_font").value;
-        const assBold = 0;
-        const assBoldTag = "\\b0";
-        const chromeBoldSize = isBold ? getChromeBoldSize(fSize) : 0;
+        const assBold = isBold ? -1 : 0;
+        const assBoldTag = isBold ? `\\b${BOLD_FONT_WEIGHT}` : "\\b0";
+        const boldExpansion = isBold ? getBoldExpansion(fSize) : 0;
         const isOutlineActive =
           document.getElementById("check_outline").checked;
         const isShadowActive = document.getElementById("check_shadow").checked;
@@ -1372,6 +1588,7 @@
                 getFirstCommentDate(rows);
               const timeInput = document.getElementById("val_time");
               timeInput.value = syncInputHour(firstCommentDate, timeInput.value);
+              saveSettings();
               const timeStr = document.getElementById("val_time").value;
               const timeParts = timeStr.split(":");
               const startDateTime = new Date(firstCommentDate);
@@ -1422,12 +1639,28 @@
           // Keep lanes compact while still reserving room for outlines and
           // shadows. The lanes are stacked from the top instead of stretched
           // across the whole comment area.
-          const boldStroke = isBold ? chromeBoldSize : 0;
-          const outlineReach = oSize + boldStroke;
+          const outlineReach = oSize;
           const shadowReach = sDist + sSize + bVal * 2;
           const effectReach = Math.max(outlineReach, shadowReach);
-          const minLaneStep = Math.ceil(
-            fSize * 1.22 + effectReach * 1.4 + 8 * output.scale,
+          const commentsBySecond = new Map();
+          for (const comment of comments) {
+            const second = getCommentSecond(comment);
+            commentsBySecond.set(second, (commentsBySecond.get(second) || 0) + 1);
+          }
+          const maxSameSecondCount = Math.max(1, ...commentsBySecond.values());
+          const comfortableLaneStep = Math.ceil(
+            fSize * 1.12 + effectReach * 0.8 + 4 * output.scale,
+          );
+          const burstFitLaneStep =
+            maxSameSecondCount > 1
+              ? Math.floor((commentAreaHeight - fSize) / (maxSameSecondCount - 1))
+              : comfortableLaneStep;
+          const minReadableLaneStep = Math.ceil(
+            fSize * 0.92 + effectReach * 0.35 + 2 * output.scale,
+          );
+          const minLaneStep = Math.max(
+            minReadableLaneStep,
+            Math.min(comfortableLaneStep, burstFitLaneStep),
           );
           const laneCount = Math.max(
             1,
@@ -1446,7 +1679,7 @@
             );
             if (!text) continue;
 
-            const second = Math.floor(comment.offsetMs / 1000);
+            const second = getCommentSecond(comment);
             const width = estimateCommentWidth(text, fSize);
             maxWidthBySecond.set(
               second,
@@ -1459,32 +1692,46 @@
             if (!contentStr) continue;
             contentStr = escapeAssText(contentStr);
 
-            const second = Math.floor(comment.offsetMs / 1000);
+            const second = getCommentSecond(comment);
             const commentWidth =
               maxWidthBySecond.get(second) ||
               estimateCommentWidth(contentStr, fSize);
-            const lane = pickLane(
-              laneLastComment,
+            const displayTiming = getCenteredDisplayTiming(
               comment.offsetMs,
+              output,
               commentWidth,
               durationMs,
+            );
+            const laneIndex = pickLane(
+              laneLastComment,
+              displayTiming.displayStartMs,
+              commentWidth,
+              displayTiming.displayDurationMs,
               output,
             );
-            const diffMs = lane.startMs;
-            laneLastComment[lane.index] = {
-              startMs: diffMs,
+            const assignedLaneIndex =
+              laneIndex === -1 ? laneLastComment.length : laneIndex;
+            if (laneIndex === -1) {
+              laneLastComment.push(null);
+            }
+            laneLastComment[assignedLaneIndex] = {
+              startMs: displayTiming.displayStartMs,
               width: commentWidth,
+              durationMs: displayTiming.displayDurationMs,
             };
 
-            const startAss = formatAssTime(diffMs);
-            const endAss = formatAssTime(diffMs + durationMs);
-            const yPos = topMargin + lane.index * laneStep;
+            const startAss = formatAssTime(displayTiming.displayStartMs);
+            const endAss = formatAssTime(
+              displayTiming.displayStartMs + displayTiming.displayDurationMs,
+            );
+            const yPos = topMargin + assignedLaneIndex * laneStep;
             const moveTag = buildMoveTag(
               output,
               yPos,
               0,
               durationMs,
               commentWidth,
+              displayTiming.elapsedAtStartMs,
             );
 
             if (renderShadow) {
@@ -1498,21 +1745,20 @@
                 sDist,
                 durationMs,
                 commentWidth,
+                displayTiming.elapsedAtStartMs,
               );
-              tags += `${assBoldTag}\\1c${cTag}\\3c${cTag}\\1a${aTag}\\3a${aTag}\\bord${sSize}`;
+              tags += `${assBoldTag}\\1c${cTag}\\3c${cTag}\\1a${aTag}\\3a${aTag}\\bord${sSize}\\xbord${sSize + boldExpansion}\\ybord${sSize}`;
               if (bVal > 0) tags += `\\blur${bVal}`;
               assContent += `Dialogue: 0,${startAss},${endAss},Default,,0,0,0,,{${tags}}${contentStr}\n`;
             }
             if (renderText) {
               if (isBold) {
-                if (opO > 0 && oSize > 0) {
-                  const outlineTags = `${moveTag}\\b0\\1a&HFF&\\3c${outlineTag}\\3a${outlineAlphaTag}\\bord${oSize + chromeBoldSize}`;
-                  assContent += `Dialogue: 1,${startAss},${endAss},Default,,0,0,0,,{${outlineTags}}${contentStr}\n`;
+                if (oSize > 0 && opO > 0) {
+                  const outerOutlineTags = `${moveTag}${assBoldTag}\\1a&HFF&\\3c${outlineTag}\\3a${outlineAlphaTag}\\bord${oSize}\\xbord${oSize + boldExpansion}\\ybord${oSize}`;
+                  assContent += `Dialogue: 1,${startAss},${endAss},Default,,0,0,0,,{${outerOutlineTags}}${contentStr}\n`;
                 }
-                const chromeBoldTags = `${moveTag}\\b0\\1a&HFF&\\3c${primaryTag}\\3a${primaryAlphaTag}\\bord${chromeBoldSize}`;
-                assContent += `Dialogue: 2,${startAss},${endAss},Default,,0,0,0,,{${chromeBoldTags}}${contentStr}\n`;
-                const textTags = `${moveTag}${assBoldTag}\\1c${primaryTag}\\1a${primaryAlphaTag}\\bord0`;
-                assContent += `Dialogue: 3,${startAss},${endAss},Default,,0,0,0,,{${textTags}}${contentStr}\n`;
+                const boldTextTags = `${moveTag}${assBoldTag}\\1c${primaryTag}\\3c${primaryTag}\\1a${primaryAlphaTag}\\3a${primaryAlphaTag}\\bord0\\xbord${boldExpansion}\\ybord0`;
+                assContent += `Dialogue: 2,${startAss},${endAss},Default,,0,0,0,,{${boldTextTags}}${contentStr}\n`;
               } else {
                 const textTags = `${moveTag}${assBoldTag}\\1c${primaryTag}\\3c${outlineTag}\\1a${primaryAlphaTag}\\3a${outlineAlphaTag}\\bord${oSize}`;
                 assContent += `Dialogue: 1,${startAss},${endAss},Default,,0,0,0,,{${textTags}}${contentStr}\n`;
