@@ -1,7 +1,7 @@
 {
   "name": "discord-csv2ass",
   "productName": "Discord CSV2ASS",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Discord CSV log to ASS subtitle converter",
   "author": "Ihurah_com",
   "main": "main.js",
