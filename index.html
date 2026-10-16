@@ -1586,9 +1586,6 @@
               const rows = parseCSV(inputText);
               const { dateIdx, contentIdx, firstCommentDate } =
                 getFirstCommentDate(rows);
-              const timeInput = document.getElementById("val_time");
-              timeInput.value = syncInputHour(firstCommentDate, timeInput.value);
-              saveSettings();
               const timeStr = document.getElementById("val_time").value;
               const timeParts = timeStr.split(":");
               const startDateTime = new Date(firstCommentDate);
