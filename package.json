@@ -1,23 +1,34 @@
 {
   "name": "discord-csv2ass",
   "productName": "Discord CSV2ASS",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Discord CSV log to ASS subtitle converter",
   "author": "Ihurah_com",
   "main": "main.js",
   "scripts": {
+    "prestart": "npm run prepare-youtube-emojis && npm run build-ui",
     "start": "electron .",
-    "build": "electron-packager . \"Discord CSV2ASS\" --platform=win32 --arch=x64 --overwrite --asar --icon=assets/icon --out=dist --ignore=\"^/dist($|/)\" --win32metadata.CompanyName=\"Discord CSV2ASS\" --win32metadata.FileDescription=\"Discord CSV2ASS\" --win32metadata.ProductName=\"Discord CSV2ASS\" --win32metadata.InternalName=\"Discord CSV2ASS\"",
+    "prebuild": "npm run prepare-youtube-emojis && npm run build-ui",
+    "build": "electron-packager . \"Discord CSV2ASS\" --platform=win32 --arch=x64 --overwrite --asar.unpack=\"**/ffmpeg-static/ffmpeg.exe\" --icon=assets/icon --out=dist --ignore=\"^/(dist|tests|renderer|scripts|[.]agents)($|/)|^/(build-installer[.]js|package-lock[.]json)$\" --win32metadata.CompanyName=\"Discord CSV2ASS\" --win32metadata.FileDescription=\"Discord CSV2ASS\" --win32metadata.ProductName=\"Discord CSV2ASS\" --win32metadata.InternalName=\"Discord CSV2ASS\"",
+    "build-ui": "node scripts/build-ui.js",
+    "pretest": "npm run build-ui",
+    "test": "node --test tests/*.test.js",
+    "prepare-youtube-emojis": "node scripts/prepare-youtube-emojis.js",
+    "fetch-youtube-emojis": "node scripts/prepare-youtube-emojis.js --refresh",
     "build-installer": "node build-installer.js"
   },
   "devDependencies": {
+    "@fluentui/react-components": "9.74.11",
+    "@fluentui/react-icons": "2.0.344",
     "electron": "^31.0.0",
     "electron-packager": "^17.1.2",
-    "electron-prebuilt": "^1.3.0",
-    "electron-rebuild": "^3.2.9",
-    "electron-winstaller": "^5.4.0"
+    "electron-winstaller": "^5.4.0",
+    "esbuild": "0.25.12",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1"
+    "ffmpeg-static": "^5.3.0",
+    "gemoji": "^8.1.0"
   }
 }

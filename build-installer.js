@@ -5,7 +5,10 @@ const fs = require("fs");
 async function createInstaller() {
   console.log("Creating Windows Installer...");
 
-  const appDirectory = path.join(__dirname, "dist/Discord CSV2ASS-win32-x64");
+  const appDirectory = path.resolve(
+    __dirname,
+    process.argv[2] || "dist/Discord CSV2ASS-win32-x64",
+  );
   const outputDirectory = path.join(__dirname, "dist/installer");
   const iconPath = path.join(__dirname, "assets/icon.ico");
 

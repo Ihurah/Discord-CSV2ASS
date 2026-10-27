@@ -1,0 +1,6 @@
+{
+  "emojis": [
+    { "text": ":youtube_custom:", "file": "youtube_custom.png" },
+    { "text": "<a:discord_emoji:123456789>", "file": "discord_emoji.gif" }
+  ]
+}

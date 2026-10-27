@@ -1,0 +1,7 @@
+{
+  "emojis": [
+    { "text": ":youtube_custom:", "file": "images/youtube_custom.png" },
+    { "text": ":youtube_from_url:", "url": "https://example.com/emoji.png" },
+    { "text": ":youtube_animated:", "file": "images/youtube_animated.gif" }
+  ]
+}
