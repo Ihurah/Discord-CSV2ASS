@@ -83,7 +83,7 @@ Fluent UI v9のタブで作業を切り替えます。タブを移動しても�
 
 画質の初期値は「High（高画質）」、エンコード速度は「標準」です。H.264（x264）の画質はHigh（CRF 18）／Medium（CRF 23）／Low（CRF 28）に対応し、ほかの方式はそれぞれのCRF・CQ・QPなどへ変換します。同じ段階でも、異なるエンコーダー間で画質や容量が同一になるわけではありません。FFV1はロスレスのため画質・速度の選択を無効にします。MPEG-2/4も速度の選択は使いません。高ビット深度の選択はSDRをHDRに変換する機能ではありません。選んだエンコーダーと設定はこのPCに保持します。
 
-実装の各方式のオプションは [FFmpegのエンコーダー資料](https://ffmpeg.org/ffmpeg-codecs.html) と同梱バイナリの `-h encoder=...` で確認できます。
+FFmpegはアプリに同梱しているため、HandBrakeやFFmpegを別途インストールせずに焼き付けできます。
 
 一般的な絵文字は、同梱の **Noto Color Emoji** で表示・画像化してカラーを保持します。確認欄とアプリ内の焼き付けで同じ絵文字フォントを使用し、OSへのフォントインストールは不要です。GIFはコメントの表示開始に合わせて再生します。
 
@@ -115,15 +115,13 @@ PNG / JPEG / WebP / GIF、1件20MBまでです。DiscordのメッセージURLや
 
 CSV・XMLに実際に記録されている文字列を、そのまま追加フォームへ入力してください。登録後は画像・対応する文字列が一覧に追加され、各行の「画像を変更」「削除」で管理できます。同じ文字列の再登録でも画像を更新できます。画像は1件20MBまでです。登録画像はアプリのデータ領域へコピーされ、再起動後も保持されます。元ファイルの移動・削除には影響されません。
 
-### YouTube独自絵文字を開発者側で同梱する
+### YouTube独自絵文字
 
-YouTube用の対応表は `assets/youtube/emoji-map.json` です。画像URLから取得する場合は `{"text": ":youtube_custom:", "url": "https://example.com/emoji.png"}` のように記載します。`npm start` / `npm run build` の前に未取得画像を自動ダウンロードし、`assets/youtube/images/` に保存します。GIFも対応しています。ローカル画像を使う場合は、従来どおり `file` に `images/example.png` のような相対パスを指定してください。
+対応するYouTube独自絵文字はアプリに同梱しているため、利用者による追加操作や、表示・焼き付け時のネット接続は不要です。
 
-同じURLから画像を再取得したい場合は `npm run fetch-youtube-emojis` を実行します。取得済みの画像は同梱するため、配布後の起動・焼き付け時にはネット接続は不要です。詳しい手順は `assets/youtube/README.md` に記載しています。
+同梱絵文字はDiscord絵文字の一覧・登録件数には含めません。通常・拡大プレビューのサンプルの初期値には、同梱絵文字の先頭2点を含めます。サンプルテキストは自由に編集でき、内容は保持されますが、実際に書き出すコメントには追加されません。
 
-再ビルドして配布すると、自動で変換・焼き付けに使用します。YouTube同梱絵文字はDiscord絵文字の一覧・登録件数には含めず、通常・拡大プレビューのサンプルの初期値に先頭2点を含めます。サンプルはプレビュー下の「サンプルテキスト」で自由に編集でき、改行や絵文字も反映します。編集内容は保持され、実際に書き出すコメントには追加しません。利用者によるインポート操作は不要です。開発者による画像の差し替えはアプリ更新で反映し、利用者が同じ文字列に独自画像を設定している場合はそちらを優先します。利用者が登録した上書き設定は一覧から管理でき、削除すると同梱画像に戻ります。
-
-YouTube以外の共通同梱設定は `assets/emoji-map.json` でも指定できます（例: `assets/emoji-map.example.json`）。同梱画像は各設定JSONと同じフォルダー内、またはその子フォルダーへ配置してください。YouTube共通絵文字を同梱しています。追加したい独自絵文字は画像と文字列を対応表へ登録してください。
+同じ文字列に独自画像を登録すると、その画像を優先して使います。登録した画像を一覧から削除すると、同梱画像に戻ります。
 
 ## 操作の流れ
 
@@ -154,35 +152,12 @@ YouTube以外の共通同梱設定は `assets/emoji-map.json` でも指定でき
 - Squirrel.Windows
   - インストール、アンインストール、ショートカット作成の補助
 - FFmpeg / libass（ffmpeg-static）
-  - ASS字幕の描画、画像・GIFの合成、H.264 / AAC動画の出力
+  - ASS字幕の描画、画像・GIFの合成、複数の動画形式への出力
 - gemoji
   - 一般的な絵文字名とUnicode絵文字の対応辞書
 - Claude, Gemini, Codex
   - 開発の補助
 
-## 開発・ビルド
-
-```sh
-npm ci
-npm test
-npm start
-npm run build
-npm run build-installer
-```
-
-FFmpegは依存関係のインストール時に取得し、配布アプリに同梱します。利用者がHandBrakeやFFmpegを別途インストールする必要はありません。
-
-`npm start` / `npm run build` の前にFluent UIの画面も自動ビルドします。画面だけ更新する場合は `npm run build-ui` を実行してください。画面のソースは `renderer/workspace.jsx` と `renderer/workspace.css`、生成先は `assets/ui/` です。既存の変換・設定・画像管理処理と接続し、同じ入力要素をタブ間で保持しています。
-
-画面構成は [electron-fluent-ui](https://github.com/oliverschwendener/electron-fluent-ui) の `FluentProvider` / `TabList` とデザイントークンの使い方を参考にしています。参考リポジトリ本体は実行・ビルドに必要ありません。
+## ライセンス・参照元
 
 サードパーティーのライセンス・参照元は `THIRD_PARTY_NOTICES.md` を参照してください。
-
-### テスト
-
-```sh
-npm test
-npx electron tests/electron-smoke.cjs
-```
-
-画面のスクリーンショットも必要な場合は、UIテストに `--screenshots` を付けてください。画像は `dist/test-artifacts/` にだけ出力し、通常のテストではプロジェクト内に検証用画像を残しません。
