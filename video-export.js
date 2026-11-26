@@ -61,7 +61,7 @@ async function runEncoder({ cwd, input, output, plan, assets, onProgress, regist
     else args.push('-loop', '1', '-framerate', rate?.filter || '30');
     args.push('-i', asset.path);
   });
-  args.push('-filter_complex_threads', '1', '-filter_complex_script', 'filters.txt',
+  args.push('-filter_complex_threads', '1', '-/filter_complex', 'filters.txt',
     '-map', '[out]', '-map', '0:a:0?', ...encoding.videoArgs,
     ...(rate ? ['-fps_mode', 'cfr', '-r', rate.filter] : ['-fps_mode', 'passthrough', '-enc_time_base', 'filter']),
     ...encoding.audioArgs, ...encoding.muxArgs,

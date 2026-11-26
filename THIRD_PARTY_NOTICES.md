@@ -2,19 +2,14 @@
 
 ## FFmpeg
 
-Video export launches the separate FFmpeg executable supplied by `ffmpeg-static`.
-The bundled executable's license and build information are shipped alongside it
-as `node_modules/ffmpeg-static/ffmpeg.exe.LICENSE` and
-`node_modules/ffmpeg-static/ffmpeg.exe.README` inside the application resources.
+Video export uses the FFmpeg 9.1 Windows x64 static Essentials build from
+Gyan Doshi. The binary is licensed under GPL version 3. Its license and build
+information are shipped alongside it in `assets/ffmpeg-bin/` and in the
+application resources.
 
-The Windows binary currently supplied by the installed dependency is FFmpeg
-6.1.1-essentials_build-www.gyan.dev, licensed under GPL version 3.
-The build information identifies its FFmpeg source revision as:
-https://github.com/FFmpeg/FFmpeg/commit/e38092ef93
-
-Build provider and source/build information: https://www.gyan.dev/ffmpeg/builds/
-Package download information: `node_modules/ffmpeg-static/README.md`.
-Consult the actual bundled license and build information when updating binaries.
+Build provider: https://www.gyan.dev/ffmpeg/builds/
+FFmpeg source revision: https://github.com/FFmpeg/FFmpeg/commit/74e4393595
+FFmpeg source: https://ffmpeg.org/
 
 ## React / Fluent UI
 

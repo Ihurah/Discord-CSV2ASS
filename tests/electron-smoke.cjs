@@ -12,7 +12,7 @@ electron.app.setPath('userData', path.join(directory, 'profile'));
 electron.app.disableHardwareAcceleration();
 const video = path.join(directory, 'source.mp4');
 const image = path.join(directory, 'stamp.gif');
-const ffmpeg = require('ffmpeg-static');
+const ffmpeg = require('../video-encoders').ffmpegPath();
 for (const args of [
   ['-f', 'lavfi', '-i', 'color=black:s=1280x720:r=30:d=2', '-c:v', 'libx264', '-preset', 'ultrafast', video],
   ['-f', 'lavfi', '-i', 'testsrc=s=32x32:r=4:d=1', '-loop', '0', image],

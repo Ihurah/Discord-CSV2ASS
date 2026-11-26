@@ -1,12 +1,14 @@
 const { execFile } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
 const { promisify } = require('node:util');
 const { getFrameRate } = require('./video-frame-rates');
 
 const executeFile = promisify(execFile);
 
 function ffmpegPath() {
-  const executable = require('ffmpeg-static');
-  if (!executable) throw new Error('このOS用のFFmpegが見つかりません。');
+  const executable = path.join(__dirname, 'assets', 'ffmpeg-bin', 'ffmpeg.exe');
+  if (!fs.existsSync(executable)) throw new Error('FFmpeg executable not found. Run npm run prepare-ffmpeg.');
   return executable.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 }
 

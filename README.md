@@ -151,7 +151,7 @@ CSV・XMLに実際に記録されている文字列を、そのまま追加フ�
   - Windows インストーラーの作成
 - Squirrel.Windows
   - インストール、アンインストール、ショートカット作成の補助
-- FFmpeg / libass（ffmpeg-static）
+- FFmpeg 9.1 / libass（Gyan Windows static build）
   - ASS字幕の描画、画像・GIFの合成、複数の動画形式への出力
 - gemoji
   - 一般的な絵文字名とUnicode絵文字の対応辞書
